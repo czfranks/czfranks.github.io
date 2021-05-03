@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script src="three.min.js"> </script> 
+    <script src="OrbitControls.js"> </script>
+
+    <script type="module">    
+/* 
+ ██████╗██╗      █████╗ ███████╗███████╗███████╗      ███████╗██╗   ██╗███╗   ██╗ ██████╗██╗ ██████╗ ███╗   ██╗███████╗███████╗
+██╔════╝██║     ██╔══██╗██╔════╝██╔════╝██╔════╝      ██╔════╝██║   ██║████╗  ██║██╔════╝██║██╔═══██╗████╗  ██║██╔════╝██╔════╝
+██║     ██║     ███████║███████╗█████╗  ███████╗█████╗█████╗  ██║   ██║██╔██╗ ██║██║     ██║██║   ██║██╔██╗ ██║█████╗  ███████╗
+██║     ██║     ██╔══██║╚════██║██╔══╝  ╚════██║╚════╝██╔══╝  ██║   ██║██║╚██╗██║██║     ██║██║   ██║██║╚██╗██║██╔══╝  ╚════██║
+╚██████╗███████╗██║  ██║███████║███████╗███████║      ██║     ╚██████╔╝██║ ╚████║╚██████╗██║╚██████╔╝██║ ╚████║███████╗███████║
+ ╚═════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝      ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚══════╝
+ */                                                                                                                               
+
+        function cos(ang)
+        {
+            return Math.cos(ang*(Math.PI/180.0));
+        }
+        function sin(ang)
+        {
+            return Math.sin(ang*(Math.PI/180.0));
+        }
+        function getDistance(x1,y1,x2,y2)
+        {
+            var a = x1 - x2;
+            var b = y1 - y2;
+            return Math.sqrt( a*a + b*b );
+        }
+
+
+        /* Datos del sistema solar, 'escalados' para mejor visualizacion */
+        var data = {
+            /* PLANETAS PLANETAS PLANETAS PLANETAS PLANETAS PLANETAS PLANETAS  */
+            sun: {
+                distance: 0,
+                radio: 3,
+                ra: 0,
+                rb: 0,
+                foco: 0,
+                v: 0,
+                angle: 0
+            },
+            mercury: {
+                distance: 1.95,         /* Distancia al Sol */
+                radio:    0.5356863,    /* Radio del Astro */
+                ra: 5.79,               /* Radio menor de la orbita elliptica en eje X */
+                rb: 5.9110236,          /* Radio mayor de la orbita elliptica en eje Y */
+                foco: 1.19,             /* Longitud de foco de la orbita elliptica */
+                v: 47.4,                /* Velocidad promedio del Astro */
+                angle: 0,               /* angulo de posicion del astro en la orbita: default=0 */
+                angle_inclination: 7.0  /* angulo de inclinacion de la orbita */
+            },
+            venus: {
+                distance: 3.615,
+                radio:    0.6384499,
+                ra: 9.836363636,
+                rb: 9.836569482,
+                foco: 0.06363636364,
+                v: 35.0,
+                angle: 0,
+                angle_inclination: 3.4
+            },
+            earth: {
+                distance: 5,
+                radio:    0.6477236,
+                ra: 12.36363636,
+                rb: 12.36536261,
+                foco: 0.2066115702,
+                v: 29.8,
+                angle: 0,
+                angle_inclination: 0
+            },
+            mars: {
+                distance: 7.65,
+                radio:    0.5628956,
+                ra: 17.12246431,
+                rb: 17.19708539,
+                foco: 1.600300526,
+                v: 24.1,
+                angle: 0,
+                angle_inclination: 1.9
+            },
+            jupiter: {
+                distance: 26.015,
+                radio:    2.5000000,
+                ra: 53.17601257,
+                rb: 53.23948176,
+                foco: 2.598866198,
+                v: 13.1,
+                angle: 0,
+                angle_inclination: 1.3
+            },
+            saturn: {
+                distance: 30,
+                radio:    2.1807146,
+                ra: 89.01217627,
+                rb: 89.15397804,
+                foco: 5.02635811,
+                v: 9.7,
+                angle: 0,
+                angle_inclination: 2.5
+            },
+            uranus: {
+                distance: 30,
+                radio:    1.1933591,
+                ra: 162.142314,
+                rb: 162.3112304,
+                foco: 7.403075593,
+                v: 6.8,
+                angle: 0,
+                angle_inclination: 0.8
+            },
+            neptune: {
+                distance: 30,
+                radio:    1.1707440,
+                ra: 230.6697057,
+                rb: 230.6843197,
+                foco: 2.596580078,
+                v: 5.4,
+                angle: 0,
+                angle_inclination: 1.8
+            },
+            pluto: {
+                distance: 30,
+                radio:    0.5000000*10,
+                ra: 333.3980597,
+                rb: 343.5627231,
+                foco: 82.95226639,
+                v: 4.7,
+                angle: 0,
+                angle_inclination:  17.2 
+            },
+            /* SATELITES SATELITES SATELITES SATELITES SATELITES SATELITES SATELITES  */
+            
+        };
+
+    /* 
+         ██████╗ █████╗ ███╗   ███╗███████╗██████╗  █████╗ 
+        ██╔════╝██╔══██╗████╗ ████║██╔════╝██╔══██╗██╔══██╗
+        ██║     ███████║██╔████╔██║█████╗  ██████╔╝███████║
+        ██║     ██╔══██║██║╚██╔╝██║██╔══╝  ██╔══██╗██╔══██║
+        ╚██████╗██║  ██║██║ ╚═╝ ██║███████╗██║  ██║██║  ██║
+        ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝                                                                                                        
+     */                                                                                    
+        
+        var camera = new THREE.PerspectiveCamera(
+            100, // angulo
+            window.innerWidth/window.innerHeight, // aspect, es lo que ve la camara
+            0.1, // near
+            4000 // far
+        );        
+        camera.position.y = -18;
+        //camera.position.z = 10;
+
+        var renderer = new THREE.WebGLRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        document.body.appendChild( renderer.domElement );
+        // para los controles del mouse
+        var controls = new THREE.OrbitControls( camera, renderer.domElement );
+        controls.minDistance = 0.01; // minima distancia a q puede hacer zoom
+        controls.maxDistance = 400; // maxima distancia a q puede hacer zoom
+
+        //var geometry = new THREE.BoxGeometry(2,2,2,3,3,3);        
+        
+
+        /* 
+        ██████╗ ██╗      █████╗ ███╗   ██╗███████╗████████╗███████╗
+        ██╔══██╗██║     ██╔══██╗████╗  ██║██╔════╝╚══██╔══╝██╔════╝
+        ██████╔╝██║     ███████║██╔██╗ ██║█████╗     ██║   ███████╗
+        ██╔═══╝ ██║     ██╔══██║██║╚██╗██║██╔══╝     ██║   ╚════██║
+        ██║     ███████╗██║  ██║██║ ╚████║███████╗   ██║   ███████║
+        ╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝   ╚══════╝
+        */
+        var wseg = 20; /* widthSegments */
+        var hseg = 20; /* heightSegments */
+        var material = new THREE.MeshBasicMaterial( {color:0x00ff00, wireframe: true} );
+
+        var sun = new THREE.Mesh( new THREE.SphereGeometry(data.sun.radio,wseg,hseg), material ); 
+        sun.position.y = 0;
+
+        var mercury = new THREE.Mesh( new THREE.SphereGeometry(data.mercury.radio,wseg,hseg), material ); 
+
+        var venus = new THREE.Mesh( new THREE.SphereGeometry(data.venus.radio,wseg,hseg), material ); 
+
+        var materialearth = new THREE.MeshBasicMaterial( {color:0x34dbeb, wireframe: true} );
+        var earth = new THREE.Mesh( new THREE.SphereGeometry(data.earth.radio,8,8), materialearth ); 
+
+        var mars = new THREE.Mesh( new THREE.SphereGeometry(data.mars.radio,wseg,hseg), material ); 
+
+        var jupiter = new THREE.Mesh( new THREE.SphereGeometry(data.jupiter.radio,wseg,hseg), material ); 
+
+        var saturn = new THREE.Mesh( new THREE.SphereGeometry(data.saturn.radio,wseg,hseg), material ); 
+
+        var uranus = new THREE.Mesh( new THREE.SphereGeometry(data.uranus.radio,wseg,hseg), material ); 
+
+        var neptune = new THREE.Mesh( new THREE.SphereGeometry(data.neptune.radio,wseg,hseg), material ); 
+
+        var pluto = new THREE.Mesh( new THREE.SphereGeometry(data.pluto.radio,wseg,hseg), material ); 
+        
+        /*  
+         ██████╗ ██████╗ ██████╗ ██╗████████╗ █████╗ ███████╗
+        ██╔═══██╗██╔══██╗██╔══██╗██║╚══██╔══╝██╔══██╗██╔════╝
+        ██║   ██║██████╔╝██████╔╝██║   ██║   ███████║███████╗
+        ██║   ██║██╔══██╗██╔══██╗██║   ██║   ██╔══██║╚════██║
+        ╚██████╔╝██║  ██║██████╔╝██║   ██║   ██║  ██║███████║
+        ╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝
+                                                   
+        */
+        function getOrbit(elipseCurve, planet, angle_inclination=0, color=0xff0000)
+        {
+            const points = elipseCurve.getPoints( 50 );
+            const geometryCurve = new THREE.BufferGeometry().setFromPoints( points );
+            const materialCurve = new THREE.LineBasicMaterial( { color : 0xff0000 } );
+            const ellipse = new THREE.Line( geometryCurve, materialCurve );
+
+            ellipse.rotation.y = angle_inclination*Math.PI/180;
+            
+            return ellipse;
+        }
+
+        const curve_mercury = new THREE.EllipseCurve(
+            0,  data.mercury.foco,
+            // ax, aY
+            data.mercury.ra, data.mercury.rb, // xRadius, yRadius
+            0,  2 * Math.PI,  // aStartAngle, aEndAngle
+            false,            // aClockwise
+            0                 // aRotation
+        );
+        const curve_venus = new THREE.EllipseCurve(
+            0,  data.venus.foco,            /* ayudamos a poner al sol como el foco de la ellipse */
+            data.venus.ra, data.venus.rb,
+            0,  2 * Math.PI,  
+        );
+        const curve_earth = new THREE.EllipseCurve(
+            0,  data.earth.foco,
+            data.earth.ra, data.earth.rb,
+            0,  2 * Math.PI,  
+        );
+        const curve_mars = new THREE.EllipseCurve(
+            0,  data.mars.foco,
+            data.mars.ra, data.mars.rb,
+            0,  2 * Math.PI,  
+        );
+        const curve_jupiter = new THREE.EllipseCurve(
+            0,  data.jupiter.foco,
+            data.jupiter.ra, data.jupiter.rb,
+            0,  2 * Math.PI,  
+        );
+        const curve_saturn = new THREE.EllipseCurve(
+            0,  data.saturn.foco,
+            data.saturn.ra, data.saturn.rb,
+            0,  2 * Math.PI,  
+        );
+        const curve_uranus = new THREE.EllipseCurve(
+            0,  data.uranus.foco,
+            data.uranus.ra, data.uranus.rb,
+            0,  2 * Math.PI,  
+        );
+        const curve_neptune = new THREE.EllipseCurve(
+            0,  data.neptune.foco,
+            data.neptune.ra, data.neptune.rb,
+            0,  2 * Math.PI,  
+        );
+        const curve_pluto = new THREE.EllipseCurve(
+            0,  data.pluto.foco,
+            data.pluto.ra, data.pluto.rb,
+            0,  2 * Math.PI,  
+        );
+
+        /* 
+         ██████╗ ██████╗ ███╗   ██╗███████╗██╗ ██████╗ ██╗   ██╗██████╗  █████╗  ██████╗██╗ ██████╗ ███╗   ██╗
+        ██╔════╝██╔═══██╗████╗  ██║██╔════╝██║██╔════╝ ██║   ██║██╔══██╗██╔══██╗██╔════╝██║██╔═══██╗████╗  ██║
+        ██║     ██║   ██║██╔██╗ ██║█████╗  ██║██║  ███╗██║   ██║██████╔╝███████║██║     ██║██║   ██║██╔██╗ ██║
+        ██║     ██║   ██║██║╚██╗██║██╔══╝  ██║██║   ██║██║   ██║██╔══██╗██╔══██║██║     ██║██║   ██║██║╚██╗██║
+        ╚██████╗╚██████╔╝██║ ╚████║██║     ██║╚██████╔╝╚██████╔╝██║  ██║██║  ██║╚██████╗██║╚██████╔╝██║ ╚████║
+        ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+        */
+
+
+        var scene = new THREE.Scene();
+        //scene.background = new THREE.Color(0x008800);
+
+        const axesHelper = new THREE.AxesHelper( 30 ); /* coordenadas */
+        scene.add( axesHelper );
+        scene.add(sun);
+        scene.add(mercury); scene.add(getOrbit(curve_mercury, data.mercury, data.mercury.angle_inclination ));
+        scene.add(venus);   scene.add(getOrbit(curve_venus,   data.venus,   data.venus.angle_inclination   ));
+        scene.add(earth);   scene.add(getOrbit(curve_earth,   data.earth,   data.earth.angle_inclination   ));
+        scene.add(mars);    scene.add(getOrbit(curve_mars,    data.mars,    data.mars.angle_inclination    ));
+        scene.add(jupiter); scene.add(getOrbit(curve_jupiter, data.jupiter, data.jupiter.angle_inclination ));
+        scene.add(saturn);  scene.add(getOrbit(curve_saturn,  data.saturn,  data.saturn.angle_inclination  ));
+        scene.add(uranus);  scene.add(getOrbit(curve_uranus,  data.uranus,  data.uranus.angle_inclination  ));
+        scene.add(neptune); scene.add(getOrbit(curve_neptune, data.neptune, data.neptune.angle_inclination ));
+        scene.add(pluto);   scene.add(getOrbit(curve_pluto,   data.pluto,   data.pluto.angle_inclination   ));
+
+        var velocity_proportion = 1/100; /* proporcion de velocidad en pantalla valores de 0 a 1 */
+
+        /* 
+         █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
+        ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
+        ███████║██╔██╗ ██║██║██╔████╔██║███████║   ██║   ██║██║   ██║██╔██╗ ██║
+        ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
+        ██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║
+        ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+          */                                                                   
+        
+        renderer.render( scene, camera );
+
+        // para que el renderer se actualize al redimensionar el navegador
+        window.addEventListener('resize', redimensionar);
+        function redimensionar(){
+            // actualizamos las vcariables que dependen del tamanio delñ navegador
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            renderer.render( scene, camera );
+        }
+        /*  */
+        var theta = 0;
+        /*  */
+        var animate = function(){
+            requestAnimationFrame(animate);            
+
+            // para recorrer cada objeto de la scena (tambien incluye la camara)
+            scene.traverse(function(object){
+                if (object.isMesh == true){ // para evitar rotar la camara
+                    object.rotation.x += 0.01;
+                    //object.rotation.y += 0.01;
+
+                    if(object == mercury){
+                        object.position.y = data.mercury.foco+(data.mercury.rb)*sin(data.mercury.angle);
+                        object.position.x = (data.mercury.ra)*cos(data.mercury.angle);
+
+                        object.position.z = object.position.x*sin(-data.mercury.angle_inclination);
+                        object.position.x = object.position.x*cos(-data.mercury.angle_inclination);
+
+                        var resultante = Math.sqrt(object.position.x*object.position.x + 
+                                         object.position.z*object.position.z);
+                        var dist = getDistance (0,0, resultante,object.position.y );
+                        var perihelion = data.mercury.rb-data.mercury.foco;
+                        var velocityVariation = velocity_proportion*data.mercury.v*( perihelion/dist );
+                        data.mercury.angle = (data.mercury.angle+velocityVariation)%360;
+                    }
+                    else if(object == venus){
+                        object.position.y = data.venus.foco+(data.venus.rb)*sin(data.venus.angle);
+                        object.position.x = (data.venus.ra)*cos(data.venus.angle);
+
+                        object.position.z = object.position.x*sin(-data.venus.angle_inclination);
+                        object.position.x = object.position.x*cos(-data.venus.angle_inclination);
+
+                        var resultante = Math.sqrt(object.position.x*object.position.x + 
+                                         object.position.z*object.position.z);
+                        var dist = getDistance (0,0, resultante,object.position.y );
+                        var perihelion = data.venus.rb-data.venus.foco;
+                        var velocityVariation = velocity_proportion*data.venus.v*( perihelion/dist );
+                        data.venus.angle = (data.venus.angle+velocityVariation)%360;
+                    }
+                    else if(object == earth){
+                        object.position.y = data.earth.foco+(data.earth.rb)*cos(data.earth.angle);
+                        object.position.x = (data.earth.ra)*sin(data.earth.angle);
+
+                        object.position.z = object.position.x*sin(-data.earth.angle_inclination);
+                        object.position.x = object.position.x*cos(-data.earth.angle_inclination);
+
+                        var resultante = Math.sqrt(object.position.x*object.position.x + 
+                                         object.position.z*object.position.z);
+                        var dist = getDistance (0,0, resultante,object.position.y );
+                        var perihelion = data.earth.rb-data.earth.foco;
+                        var velocityVariation = velocity_proportion*data.earth.v*( perihelion/dist );
+                        data.earth.angle = (data.earth.angle+velocityVariation)%360;
+                    }
+                    else if(object == mars){
+                        object.position.y = data.mars.foco+(data.mars.rb)*sin(data.mars.angle);
+                        object.position.x = (data.mars.ra)*cos(data.mars.angle);
+
+                        object.position.z = object.position.x*sin(-data.mars.angle_inclination);
+                        object.position.x = object.position.x*cos(-data.mars.angle_inclination);
+
+                        var resultante = Math.sqrt(object.position.x*object.position.x + 
+                                         object.position.z*object.position.z);
+                        var dist = getDistance (0,0, resultante,object.position.y );
+                        var perihelion = data.mars.rb-data.mars.foco;
+                        var velocityVariation = velocity_proportion*data.mars.v*( perihelion/dist );
+                        data.mars.angle = (data.mars.angle+velocityVariation)%360;
+                    }
+                    else if(object == jupiter){
+                        object.position.y = data.jupiter.foco+(data.jupiter.rb)*sin(data.jupiter.angle);
+                        object.position.x = (data.jupiter.ra)*cos(data.jupiter.angle);
+
+                        object.position.z = object.position.x*sin(-data.jupiter.angle_inclination);
+                        object.position.x = object.position.x*cos(-data.jupiter.angle_inclination);
+
+                        var resultante = Math.sqrt(object.position.x*object.position.x + 
+                                         object.position.z*object.position.z);
+                        var dist = getDistance (0,0, resultante,object.position.y );
+                        var perihelion = data.jupiter.rb-data.jupiter.foco;
+                        var velocityVariation = velocity_proportion*data.jupiter.v*( perihelion/dist );
+                        data.jupiter.angle = (data.jupiter.angle+velocityVariation)%360;
+                    }
+                    else if(object == saturn){
+                        object.position.y = data.saturn.foco+(data.saturn.rb)*sin(data.saturn.angle);
+                        object.position.x = (data.saturn.ra)*cos(data.saturn.angle);
+
+                        object.position.z = object.position.x*sin(-data.saturn.angle_inclination);
+                        object.position.x = object.position.x*cos(-data.saturn.angle_inclination);
+
+                        var resultante = Math.sqrt(object.position.x*object.position.x + 
+                                         object.position.z*object.position.z);
+                        var dist = getDistance (0,0, resultante,object.position.y );
+                        var perihelion = data.saturn.rb-data.saturn.foco;
+                        var velocityVariation = velocity_proportion*data.saturn.v*( perihelion/dist );
+                        data.saturn.angle = (data.saturn.angle+velocityVariation)%360;
+                    }
+                    else if(object == uranus){
+                        object.position.y = data.uranus.foco+(data.uranus.rb)*sin(data.uranus.angle);
+                        object.position.x = (data.uranus.ra)*cos(data.uranus.angle);
+
+                        object.position.z = object.position.x*sin(-data.uranus.angle_inclination);
+                        object.position.x = object.position.x*cos(-data.uranus.angle_inclination);
+
+                        var resultante = Math.sqrt(object.position.x*object.position.x + 
+                                         object.position.z*object.position.z);
+                        var dist = getDistance (0,0, resultante,object.position.y );
+                        var perihelion = data.uranus.rb-data.uranus.foco;
+                        var velocityVariation = velocity_proportion*data.uranus.v*( perihelion/dist );
+                        data.uranus.angle = (data.uranus.angle+velocityVariation)%360;
+                    }
+                    else if(object == neptune){
+                        object.position.y = data.earth.foco+(data.neptune.rb)*sin(data.neptune.angle);
+                        object.position.x = (data.neptune.ra)*cos(data.neptune.angle);
+
+                        object.position.z = object.position.x*sin(-data.neptune.angle_inclination);
+                        object.position.x = object.position.x*cos(-data.neptune.angle_inclination);
+
+                        var resultante = Math.sqrt(object.position.x*object.position.x + 
+                                         object.position.z*object.position.z);
+                        var dist = getDistance (0,0, resultante,object.position.y );
+                        var perihelion = data.neptune.rb-data.neptune.foco;
+                        var velocityVariation = velocity_proportion*data.neptune.v*( perihelion/dist );
+                        data.neptune.angle = (data.neptune.angle+velocityVariation)%360;
+                    }
+                    else if(object == pluto){
+                        object.position.y = data.pluto.foco+(data.pluto.rb)*sin(data.pluto.angle);
+                        object.position.x = (data.pluto.ra)*cos(data.pluto.angle);
+
+                        object.position.z = object.position.x*sin(-data.pluto.angle_inclination);
+                        object.position.x = object.position.x*cos(-data.pluto.angle_inclination);
+
+                        var resultante = Math.sqrt(object.position.x*object.position.x + 
+                                         object.position.z*object.position.z);
+                        var dist = getDistance (0,0, resultante,object.position.y );
+                        var perihelion = data.pluto.rb-data.pluto.foco;
+                        var velocityVariation = velocity_proportion*data.pluto.v*( perihelion/dist );
+                        data.pluto.angle = (data.pluto.angle+velocityVariation)%360;
+                    }
+                }
+            });
+
+            //circle.rotation 
+            renderer.render( scene, camera );
+        }
+
+        animate();
+    </script>    
+
+</body>
+</html>
