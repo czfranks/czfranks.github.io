@@ -35,6 +35,10 @@
         return Math.sqrt(a * a + b * b);
         }
 
+        function getRandomMinMax(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
         /*
                 ██████╗ █████╗ ███╗   ███╗███████╗██████╗  █████╗
                 ██╔════╝██╔══██╗████╗ ████║██╔════╝██╔══██╗██╔══██╗
@@ -217,7 +221,7 @@
         let velocitySateliteProp = 3/100;
 
         /*
-        █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
+         █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
         ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
         ███████║██╔██╗ ██║██║██╔████╔██║███████║   ██║   ██║██║   ██║██╔██╗ ██║
         ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
@@ -229,6 +233,16 @@
         renderer.shadowMapEnabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap; 
         renderer.render(scene, camera);
+        // para que el renderer se actualize al redimensionar el navegador
+        window.addEventListener('resize', redimensionar);
+
+        function redimensionar() {
+        // actualizamos las vcariables que dependen del tamanio delñ navegador
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.render(scene, camera);
+        }
 
 
         const mainLight = new THREE.PointLight(0x59340B, 1.0);
@@ -245,6 +259,7 @@
 
         var helper = new THREE.CameraHelper( mainLight.shadow.camera );
         scene.add( helper );
+        
 
         /* universo estelar */
         const vertices = [];
@@ -262,34 +277,41 @@
         scene.add( points );
         /* ///////////////////////////////////// */
 
-
-
-        // para que el renderer se actualize al redimensionar el navegador
-        window.addEventListener('resize', redimensionar);
-
-        function redimensionar() {
-        // actualizamos las vcariables que dependen del tamanio delñ navegador
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.render(scene, camera);
+        /* cinturon de asteroides */
+        let r = 20;
+        let R = 45;
+        let radio_min_geo = 0.05;
+        let radio_max_geo = 0.1;
+        let angle_cinturon = 0;
+        let cinturon = []
+        let velocity_cinturon = 0.05;
+        for (let i = 0; i < 2*360; i++) {
+            let radio_geo = getRandomMinMax(radio_min_geo,radio_max_geo);
+            var material2 = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
+            const geometry2 = new THREE.DodecahedronGeometry(radio_geo);
+            var mesh2 = new THREE.Mesh(geometry2, material2);
+            let radio = getRandomMinMax(r,R);
+            let x = radio*cos(i);
+            let y = radio*sin(i);
+            mesh2.position.set(x,y,0);
+            mesh2.radio = radio;
+            mesh2.angle = i;
+            scene.add(mesh2);
+            cinturon.push(mesh2);
         }
 
         /* //////////////////cometa cola//////////////////////// */
         const materialdashed = new THREE.LineDashedMaterial( {
-        color: 0xb5f7f2,
-        linewidth: 1,
-        scale: 1,
-        dashSize: 3,
-        gapSize: 1,
+            color: 0xb5f7f2,
+            linewidth: 1,
+            scale: 1,
+            dashSize: 3,
+            gapSize: 1,
         } );
         const Points1 = [];
-
         const geometryline = new THREE.BufferGeometry().setFromPoints( Points1 );
-
         const tailline = new THREE.Line( geometryline, materialdashed );
         scene.add(tailline);
-
         var prevVec3Cometa = new THREE.Vector3(0,0,0);
         var maxlen = 100;
         var queue = []
@@ -298,12 +320,16 @@
         let animate = function () {
         requestAnimationFrame(animate);
 
-        // para recorrer cada objeto de la scena (tambien incluye la camara)
-
         objects[0].rotation.z -= 0.01;
 
-
-
+        /* animacion de cinturon de asteroides */
+        for (let i = 0; i < cinturon.length; i += 1){
+            cinturon[i].position.x = cinturon[i].radio*sin(cinturon[i].angle);
+            cinturon[i].position.y = cinturon[i].radio*cos(cinturon[i].angle);
+            cinturon[i].angle += velocity_cinturon;
+        }
+            
+        /* animacion de astros grandes */
         for (let i = 1; i < objects.length; i += 1) {
 
         if(data[i].type === 'ring'){
