@@ -8,7 +8,10 @@
     <title>Document</title>
 </head>
 <body>
-
+    <header>
+        <p>Por favor, espere la carga de los recursos</p>
+        <p>Trabajo de computacion grafica</p>
+    </header>
     <script type="module">    
             
         import * as THREE from './jsm/three.module.js';
@@ -189,7 +192,7 @@
         //scene.background = new THREE.Color(0x008800);
 
         const axesHelper = new THREE.AxesHelper(30); /* coordenadas */
-        scene.add(axesHelper);
+        //scene.add(axesHelper);
         scene.add(objects[0]); // sun
 
         for (let i = 1; i < objects.length; i += 1) {

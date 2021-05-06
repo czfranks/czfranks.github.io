@@ -195,7 +195,7 @@
     "type": "model",
     "id_planet": 3,
     "name": "satelite-artificial",
-    "scale": 0.0009,
+    "scale": 0.0005,
     "distance": 0,
     "radio": 0.11,
     "ra": 2,
