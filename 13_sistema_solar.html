@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="main.css">
+    <title>Document</title>
+</head>
+<body>
+
+    <script type="module">    
+            
+        import * as THREE from './jsm/three.module.js';
+        import { GUI } from './jsm/dat.gui.module.js';
+        import {OBJLoader} from './jsm/OBJLoader.js';
+        import {STLLoader} from './jsm/STLLoader.js';
+        import {MTLLoader} from './jsm/MTLLoader.js';
+        import {OrbitControls} from './jsm/OrbitControls.js';
+        import { default as data } from './managers/getAstros.js'; 
+        function cos(ang) {
+        return Math.cos(ang * (Math.PI / 180.0));
+        }
+
+        function sin(ang) {
+        return Math.sin(ang * (Math.PI / 180.0));
+        }
+
+        function getDistance(x1, y1, x2, y2) {
+        let a = x1 - x2;
+        let b = y1 - y2;
+        return Math.sqrt(a * a + b * b);
+        }
+
+        /*
+                ██████╗ █████╗ ███╗   ███╗███████╗██████╗  █████╗
+                ██╔════╝██╔══██╗████╗ ████║██╔════╝██╔══██╗██╔══██╗
+                ██║     ███████║██╔████╔██║█████╗  ██████╔╝███████║
+                ██║     ██╔══██║██║╚██╔╝██║██╔══╝  ██╔══██╗██╔══██║
+                ╚██████╗██║  ██║██║ ╚═╝ ██║███████╗██║  ██║██║  ██║
+                ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝
+            */
+
+        let camera = new THREE.PerspectiveCamera(
+        100, // angulo
+        window.innerWidth / window.innerHeight, // aspect, es lo que ve la camara
+        0.1, // near
+        4000 // far
+        );
+        camera.position.y = -18;
+        //camera.position.z = 10;
+
+        let renderer = new THREE.WebGLRenderer({ alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        // para los controles del mouse
+        let controls = new OrbitControls(camera, renderer.domElement);
+        controls.minDistance = 0.01; // minima distancia a q puede hacer zoom
+        controls.maxDistance = 400; // maxima distancia a q puede hacer zoom
+
+
+        /*
+        ██████╗ ██╗      █████╗ ███╗   ██╗███████╗████████╗███████╗
+        ██╔══██╗██║     ██╔══██╗████╗  ██║██╔════╝╚══██╔══╝██╔════╝
+        ██████╔╝██║     ███████║██╔██╗ ██║█████╗     ██║   ███████╗
+        ██╔═══╝ ██║     ██╔══██║██║╚██╗██║██╔══╝     ██║   ╚════██║
+        ██║     ███████╗██║  ██║██║ ╚████║███████╗   ██║   ███████║
+        ╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝   ╚══════╝
+        */
+
+        const objects = []; // guarda los Mesh
+
+        let wseg = 30; /* widthSegments */
+        let hseg = 30; /* heightSegments */
+        for (const planet of data) {
+        /* satelite artificial con modelo */
+        if(planet.type === 'model' )
+        { 
+        var OBJFile = 'textures/satelite-artificial/10477_Satellite_v1_L3.obj';
+        var MTLFile = 'textures/satelite-artificial/10477_Satellite_v1_L3.mtl';
+        var JPGFile = 'textures/satelite-artificial/10477_Satellite_v1_Diffuse.jpg';
+
+        const mtlLoader = new MTLLoader();
+        mtlLoader.load( MTLFile, function( materials ) {
+            materials.preload();
+            const objLoader = new OBJLoader();
+            objLoader.setMaterials( materials );
+            objLoader.load( OBJFile, function ( object ) {
+                object.scale.set(planet.scale,planet.scale,planet.scale);
+                objects.push( object );
+                objects.receiveShadow = true;
+                scene.add(object);
+            });
+        });
+
+        continue;
+        }
+
+        const planetTexture = new THREE.TextureLoader().load(
+        `./textures/${planet.name}.jpg`
+        );
+        const planetMaterial = new THREE.MeshPhongMaterial({
+        emissiveMap: planetTexture,
+        emissive: 0xffffff,
+
+        });
+
+        /* rings */
+        if(planet.type === 'ring'){
+        const geometry = new THREE.RingBufferGeometry(3, 5, 64);
+        let pos = geometry.attributes.position;
+        let v3 = new THREE.Vector3();
+        for (let i = 0; i < pos.count; i++){
+        v3.fromBufferAttribute(pos, i);
+        geometry.attributes.uv.setXY(i, v3.length() < 4 ? 0 : 1, 1);
+        }
+        const material = new THREE.MeshBasicMaterial({
+        map: planetTexture,
+        color: 0xffffff,
+        side: THREE.DoubleSide,
+        transparent: true
+        });
+        const ringMesh = new THREE.Mesh( geometry, material );
+        objects.push(ringMesh);
+        }
+
+        /* planeta */
+        else {
+        const planetMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(planet.radio, wseg, hseg),
+        planetMaterial
+        );
+        planetMesh.receiveShadow = true;
+        objects.push(planetMesh);
+        }
+
+
+        }
+
+        objects[0].position.y = 0; // sun
+
+        /*
+        ██████╗ ██████╗ ██████╗ ██╗████████╗ █████╗ ███████╗
+        ██╔═══██╗██╔══██╗██╔══██╗██║╚══██╔══╝██╔══██╗██╔════╝
+        ██║   ██║██████╔╝██████╔╝██║   ██║   ███████║███████╗
+        ██║   ██║██╔══██╗██╔══██╗██║   ██║   ██╔══██║╚════██║
+        ╚██████╔╝██║  ██║██████╔╝██║   ██║   ██║  ██║███████║
+        ╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝
+
+        */
+        function getOrbit(
+        elipseCurve,
+        planet,
+        angle_inclination = 0,
+        color = 0xff0000
+        ) {
+        const points = elipseCurve.getPoints(200);
+        const geometryCurve = new THREE.BufferGeometry().setFromPoints(points);
+        const materialCurve = new THREE.LineBasicMaterial({ color: parseInt(planet.color_orbita) });
+        const ellipse = new THREE.Line(geometryCurve, materialCurve);
+
+        ellipse.rotation.y = (angle_inclination * Math.PI) / 180;
+
+        return ellipse;
+        }
+
+        const curveObjects = [];
+
+        for (const planet of data) {
+        if (planet.name === 'sun' || 
+        planet.type === 'satellite' || 
+        planet.type === 'ring' ||
+        planet.type === 'model') {
+        continue;
+        }
+        curveObjects.push(
+        new THREE.EllipseCurve(
+        0,
+        planet.foco /* ayudamos a poner al sol como el foco de la ellipse */,
+        planet.ra,
+        planet.rb,
+        0,
+        2 * Math.PI
+        )
+        );
+        }
+
+        let scene = new THREE.Scene();
+        //scene.background = new THREE.Color(0x008800);
+
+        const axesHelper = new THREE.AxesHelper(30); /* coordenadas */
+        scene.add(axesHelper);
+        scene.add(objects[0]); // sun
+
+        for (let i = 1; i < objects.length; i += 1) {
+        scene.add(objects[i]);
+        if (data[i].type === 'satellite' || 
+        data[i].type === 'ring' ||
+        data[i].type === 'model') {
+        continue;
+        }
+        scene.add(getOrbit(curveObjects[i - 1], data[i], data[i].angle_inclination));
+        }
+
+        {
+        const color = 0xffffff;
+        const intensity = 0.4;
+        const light = new THREE.PointLight(color, intensity);
+        scene.add(light);
+        }
+
+        let velocityPlanetProportion =
+        1 / 100; /* proporcion de velocidad en pantalla valores de 0 a 1 */
+        let velocitySateliteProp = 3/100;
+
+        /*
+        █████╗ ███╗   ██╗██╗███╗   ███╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
+        ██╔══██╗████╗  ██║██║████╗ ████║██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
+        ███████║██╔██╗ ██║██║██╔████╔██║███████║   ██║   ██║██║   ██║██╔██╗ ██║
+        ██╔══██║██║╚██╗██║██║██║╚██╔╝██║██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
+        ██║  ██║██║ ╚████║██║██║ ╚═╝ ██║██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║
+        ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+        */
+
+
+        renderer.shadowMapEnabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap; 
+        renderer.render(scene, camera);
+
+
+        const mainLight = new THREE.PointLight(0x59340B, 1.0);
+
+        mainLight.castShadow = true; 
+
+        //Set up shadow properties for the light
+        mainLight.shadow.mapSize.width = .1;  // default
+        mainLight.shadow.mapSize.height = .1; // default
+        mainLight.shadow.camera.near = .1;       // default
+        mainLight.shadow.camera.far = .1      // default
+        // remember to add the light to the scene
+        scene.add( mainLight);
+
+        var helper = new THREE.CameraHelper( mainLight.shadow.camera );
+        scene.add( helper );
+
+        /* universo estelar */
+        const vertices = [];
+        for ( let i = 0; i < 10000; i ++ ) {
+        const x = THREE.MathUtils.randFloatSpread( 2000 );
+        const y = THREE.MathUtils.randFloatSpread( 2000 );
+        const z = THREE.MathUtils.randFloatSpread( 2000 );
+        vertices.push( x, y, z );
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 4 ) );
+        const material = new THREE.PointsMaterial( { color: 0x888888 } );
+        const points = new THREE.Points( geometry, material );
+        scene.add( points );
+        /* ///////////////////////////////////// */
+
+
+
+        // para que el renderer se actualize al redimensionar el navegador
+        window.addEventListener('resize', redimensionar);
+
+        function redimensionar() {
+        // actualizamos las vcariables que dependen del tamanio delñ navegador
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.render(scene, camera);
+        }
+
+        /* //////////////////cometa cola//////////////////////// */
+        const materialdashed = new THREE.LineDashedMaterial( {
+        color: 0xb5f7f2,
+        linewidth: 1,
+        scale: 1,
+        dashSize: 3,
+        gapSize: 1,
+        } );
+        const Points1 = [];
+
+        const geometryline = new THREE.BufferGeometry().setFromPoints( Points1 );
+
+        const tailline = new THREE.Line( geometryline, materialdashed );
+        scene.add(tailline);
+
+        var prevVec3Cometa = new THREE.Vector3(0,0,0);
+        var maxlen = 100;
+        var queue = []
+
+        /* main loop */
+        let animate = function () {
+        requestAnimationFrame(animate);
+
+        // para recorrer cada objeto de la scena (tambien incluye la camara)
+
+        objects[0].rotation.z -= 0.01;
+
+
+
+        for (let i = 1; i < objects.length; i += 1) {
+
+        if(data[i].type === 'ring'){
+        objects[i].position.x = objects[data[i].id_planet].position.x;
+        objects[i].position.y = objects[data[i].id_planet].position.y;
+        objects[i].position.z = objects[data[i].id_planet].position.z;
+        objects[i].rotation.x = (data[i].angle_inclination*Math.PI)/180.0;
+        continue;
+        }
+        else{
+
+        objects[i].position.x = data[i].ra * sin(data[i].angle);
+        objects[i].position.y = data[i].foco + data[i].rb * cos(data[i].angle);
+        objects[i].position.z =
+        objects[i].position.x * sin(-data[i].angle_inclination);
+        objects[i].position.x =
+        objects[i].position.x * cos(-data[i].angle_inclination);
+
+        if(i==10){
+        queue.push(objects[i].position.x);
+        queue.push(objects[i].position.y);
+        queue.push(objects[i].position.z);
+
+        if(  queue.length > 3*maxlen ){
+        /* nueva cola cometa */
+        const newPoints = [];
+        newPoints.push( objects[10].position );
+        newPoints.push( new THREE.Vector3( queue[0],queue[1],queue[2] ) );
+        newPoints.push( objects[10].position );
+        newPoints.push( new THREE.Vector3( queue[0]+0.5,queue[1]+0.5,queue[2]+0.5 ) );
+        newPoints.push( objects[10].position );
+        newPoints.push( new THREE.Vector3( queue[0]+0.5,queue[1]-0.5,queue[2]-0.5 ) );
+        newPoints.push( objects[10].position );
+        newPoints.push( new THREE.Vector3( queue[0]-0.5,queue[1]+0.5,queue[2]+0.5 ) );
+        newPoints.push( objects[10].position );
+        newPoints.push( new THREE.Vector3( queue[0]-0.5,queue[1]+0.5,queue[2]-0.5 ) );
+        newPoints.push( objects[10].position );
+        newPoints.push( new THREE.Vector3( queue[0]+0.5,queue[1]-0.5,queue[2]+0.5 ) );
+        tailline.geometry.setFromPoints(newPoints);
+        tailline.computeLineDistances();
+        queue.shift();
+        queue.shift();
+        queue.shift();  
+        } 
+        }
+
+        if (data[i].type === 'satellite' ||  data[i].type === 'model') {
+        objects[i].position.y = data[i].rb * cos(data[i].angle);
+        objects[i].position.x += objects[data[i].id_planet].position.x;
+        objects[i].position.y += objects[data[i].id_planet].position.y;
+        objects[i].position.z += objects[data[i].id_planet].position.z;
+        data[i].angle = (data[i].angle + velocitySateliteProp*data[i].v)%360;
+        if(data[i].name === 'moon' || data[i].type === 'model')
+        data[i].angle = (objects[3].rotation.z * 180)/Math.PI;
+        else 
+        objects[i].rotation.z -= 0.01;
+        continue;
+        }
+        }
+        objects[i].rotation.z -= 0.01;
+
+        let resultante = Math.sqrt(
+        objects[i].position.x * objects[i].position.x +
+        objects[i].position.z * objects[i].position.z
+        );
+        let dist = getDistance(0, 0, resultante, objects[i].position.y);
+        let perihelion = data[i].rb - data[i].foco;
+        let velocityVariation =
+        velocityPlanetProportion * data[i].v * (perihelion / dist);
+        data[i].angle = (data[i].angle + velocityVariation) % 360;
+        }
+
+
+        renderer.render(scene, camera);
+        };
+
+        animate();
+
+    </script>    
+
+</body>
+</html>
